@@ -1,0 +1,6 @@
+postgres:
+    host: localhost
+    database: cantonres
+    user: kevin
+    password: foobar
+    ssl: false

@@ -1,6 +1,6 @@
-'''Based on python-telegram-bot'''
+#!/usr/bin/env python
 # coding=utf-8
-# !/usr/bin/env python
+'''Based on python-telegram-bot'''
 
 from telegram.ext import Updater
 from telegram.ext import CommandHandler
