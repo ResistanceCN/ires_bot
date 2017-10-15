@@ -25,10 +25,22 @@ logger = logging.getLogger(__name__)
 
 LANG, INGRESS_ID, AREA, RELATIONSHIP, PUSH, TUTORIALS = range(6)
 
+# TODO: Read all admins member from database
 LIST_OF_ADMINS = [11111111]
 
 
+def restricted(func):
+    @wraps(func)
+    def wrapped(bot, update, *args, **kwargs):
+        user_id = update.effective_user.id
+        if user_id not in LIST_OF_ADMINS:
+            print('Unauthorized access denied for {}.'.format(user_id))
+            return
+        return func(bot, update, *args, **kwargs)
+    return wrapped
+
 def start(bot, update):
+    """Start the bot and check admin."""
     user_id = update.effective_user.id
     if user_id not in LIST_OF_ADMINS:
         update.message.reply_text("""
@@ -43,6 +55,7 @@ def start(bot, update):
 (・ω・`| 使用 /check 查看表格""")
 
 def help(bot, update):
+    """Get the help."""
     reply_keyboard = [['Summary', 'Ingress', 'Telegram', 'Website']]
     update.message.reply_text(
         '欢迎查看教程，教程分类如下：',
@@ -51,6 +64,8 @@ def help(bot, update):
     return TUTORIALS
 
 def tutorials(bot, update):
+    """Show tutorial articles."""
+    # TODO: Connect to wiki page.
     if update.message.text == 'Summary':
         update.message.reply_text(
             'https://github.com/ResistanceCN/Tutorials',
@@ -70,6 +85,7 @@ def tutorials(bot, update):
     return ConversationHandler.END
 
 def join(bot, update):
+    """Start to fill in the form."""
     reply_keyboard = [['English', 'Chinese']]
     update.message.reply_text(
         "Choose language",
@@ -79,6 +95,7 @@ def join(bot, update):
 
 
 def get_language(bot, update):
+    """Get env language."""
     user = update.message.from_user
     logger.info("Language of %s: %s" % (user.id, update.message.text))
     global language
@@ -93,6 +110,7 @@ def get_language(bot, update):
 
 
 def get_ingress_id(bot, update):
+    "Get agent's ingress_id."
     user = update.message.from_user
     ingress_id = update.message.text
     logger.info("Ingress_id of %s: %s" % (user.id, ingress_id))
@@ -105,6 +123,7 @@ def get_ingress_id(bot, update):
     return AREA
 
 def get_location(bot, update):
+    """Get the agent's area."""
     user = update.message.from_user
     area = update.message.text
     logger.info("Location of %s: %s" % (user.id, area))
@@ -141,7 +160,7 @@ def push(bot, update):
     print(language)
     print(pushstat)
     logger.info("%s's message push status: %s" % (user.id, update.message.text))
-
+    # TODO: push to database and admin's telegram account
     if language == "Chinese":
         if pushstat == "是":
             update.message.reply_text(
@@ -158,6 +177,10 @@ def push(bot, update):
             update.message.reply_text(
                 'cancel success', reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
+
+@restricted
+def check(bot, update):
+    # TODO: Get the unchecked info from database.
 
 def cancel(bot, update):
     user = update.message.from_user
