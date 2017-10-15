@@ -22,7 +22,7 @@ class Push:
         if len(check_id) == 0:
             db.insert('joininfo', ingress_id=self.ingress_id, telegram_username=self.telegram_username, area=self.area)
         else:
-            db.query("UPDATE joininfo SET area=\'{}\' WHERE ingress_id=\'{}\'".format(self.area, self.ingress_id))
+            db.query("UPDATE joininfo SET telegram_username=\'{}\' area=\'{}\' WHERE ingress_id=\'{}\'".format(self.telegram_username, self.area, self.ingress_id))
 
     def pushToAdmin(self):
         print("ingress_id: %s \ntelegram_username: @%s \narea: %s" %(self.ingress_id, self.telegram_username, self.area))
@@ -39,6 +39,7 @@ def creatTable(db):
         db.query('''CREATE TABLE joininfo (
         id SERIAL PRIMARY KEY,
         ingress_id VARCHAR(35) NOT NULL,
+        telegram_id BIGINT(20) NOT NULL,
         telegram_username VARCHAR(35) NOT NULL,
         area VARCHAR(2) NOT NULL,
         relationship VARCHAR(35),
