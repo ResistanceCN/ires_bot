@@ -14,6 +14,8 @@ from telegram.ext import MessageHandler
 from telegram.ext import Filters
 from telegram.ext import RegexHandler
 from telegram.ext import ConversationHandler
+from parseCfg import parseCfg
+from dbServer import dbControl
 import logging
 
 # Enable logging
@@ -23,7 +25,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-LANG, INGRESS_ID, AREA, RELATIONSHIP, PUSH, TUTORIALS = range(6)
+LANG, INGRESS_ID, AREA, OTHER, PUSH, TUTORIALS = range(6)
 
 # TODO: Read all admins member from database
 LIST_OF_ADMINS = [11111111]
@@ -86,6 +88,9 @@ def tutorials(bot, update):
 
 def join(bot, update):
     """Start to fill in the form."""
+    user_id = update.effective_user.id
+    content['telegram_id'] = user_id
+    content['telegram_username'] = update.effective_user.username
     reply_keyboard = [['English', 'Chinese']]
     update.message.reply_text(
         "Choose language",
@@ -113,6 +118,7 @@ def ingress_id(bot, update):
     "Get agent's ingress_id."
     user = update.message.from_user
     ingress_id = update.message.text
+    content['ingress_id'] = update.message.text
     logger.info("Ingress_id of %s: %s" % (user.id, ingress_id))
     if language == 'English':
         update.message.reply_text(
@@ -126,17 +132,19 @@ def location(bot, update):
     """Get the agent's area."""
     user = update.message.from_user
     area = update.message.text
+    content['area'] = update.message.text
     logger.info("Location of %s: %s" % (user.id, area))
     if language == 'English':
         update.message.reply_text(
             'You may already know some players, please enter their names')
     if language == 'Chinese':
         update.message.reply_text('你可能已经认识一些玩家，请输入他们的名字')
-    return RELATIONSHIP
+    return OTHER
 
-def relationship(bot, update):
+def other(bot, update):
     user = update.message.from_user
     relationship = update.message.text
+    content['other'] = update.message.text
     logger.info("Other players of %s: %s" % (user.id, update.message.text))
     if language == 'Chinese':
         reply_keyboard = [['是', '否']]
@@ -154,7 +162,7 @@ def relationship(bot, update):
 
     return PUSH
 
-def push(bot, update, db):
+def push(bot, update):
     user = update.message.from_user
     pushstat = update.message.text
     logger.info("%s's message push status: %s" % (user.id, update.message.text))
@@ -176,12 +184,12 @@ def push(bot, update, db):
                 'cancel success', reply_markup=ReplyKeyboardRemove())
 
     if pushstat == "Yes" or "是":
-        db.push(content)
+        db.push(content)  # push to database
     return ConversationHandler.END
 
-@restricted
-def check(bot, update):
-    # TODO: Get the unchecked info from database.
+# @restricted
+# def check(bot, update):
+#     # TODO: Get the unchecked info from database.
 
 def cancel(bot, update):
     user = update.message.from_user
@@ -201,45 +209,55 @@ def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
 
 
+def main(path):
+    db.creat()  # creat tables
 
-updater = Updater("265836060:AAFUAYbxHfYgVbrOx8R3bOJMxPPBM-2IO_M")
+    updater = Updater(config.token())
 
-dp = updater.dispatcher
+    dp = updater.dispatcher
 
-help_conv_handler = ConversationHandler(
-    entry_points=[CommandHandler('help', help)],
-    states={
-        TUTORIALS: [RegexHandler(
-            '^(Summary|Ingress|Telegram|Website)$', tutorials)]
-    },
-    fallbacks=[CommandHandler('cancel', cancel)]
-)
+    help_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('help', help)],
+        states={
+            TUTORIALS: [RegexHandler(
+                '^(Summary|Ingress|Telegram|Website)$', tutorials)]
+        },
+        fallbacks=[CommandHandler('cancel', cancel)]
+    )
 
-join_conv_handler = ConversationHandler(
-    entry_points=[CommandHandler('join', join)],
+    join_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('join', join)],
 
-    states={
-        LANG: [RegexHandler('^(English|Chinese)$', language)],
+        states={
+            LANG: [RegexHandler('^(English|Chinese)$', language)],
 
-        INGRESS_ID: [MessageHandler(Filters.text, ingress_id)],
+            INGRESS_ID: [MessageHandler(Filters.text, ingress_id)],
 
-        AREA: [MessageHandler(Filters.text, location)],
+            AREA: [MessageHandler(Filters.text, location)],
 
-        RELATIONSHIP: [MessageHandler(Filters.text, relationship)],
+            OTHER: [MessageHandler(Filters.text, other)],
 
-        PUSH: [RegexHandler('^(Yes|No|是|否)$', push)]
-    },
-    fallbacks=[CommandHandler('cancel', cancel)]
-)
+            PUSH: [RegexHandler('^(Yes|No|是|否)$', push)]
+        },
+        fallbacks=[CommandHandler('cancel', cancel)]
+    )
 
-dp.add_handler(CommandHandler('start', start))
+    dp.add_handler(CommandHandler('start', start))
 
-dp.add_handler(help_conv_handler)
+    dp.add_handler(help_conv_handler)
 
-dp.add_handler(join_conv_handler)
+    dp.add_handler(join_conv_handler)
 
-dp.add_error_handler(error)
+    dp.add_error_handler(error)
 
-updater.start_polling()
+    updater.start_polling()
 
-updater.idle()
+    updater.idle()
+
+if __name__ == '__main__':
+    path = 'src/example.config.yml'
+    global content, config, db
+    content = {}
+    config = parseCfg(path)
+    db = dbControl(config)
+    main(path)
