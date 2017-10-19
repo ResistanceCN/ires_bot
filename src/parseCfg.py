@@ -63,6 +63,15 @@ class tgBotCfg():
             logger.info("Telegram bot token error")
         return token
 
+    def admin(self):
+        admin = []
+        try:
+            for i in self.content['bot']['admin']:
+                admin.append(i)
+        except IndexError:
+            logger.info("Telegram admin_id doesn't existed")
+        return admin
+
 class parseCfg(psqlCfg, tgBotCfg):
     def __init__(self, path):
         self.path = path
@@ -84,3 +93,4 @@ if __name__ == '__main__':
         "joininfo_table: ", config.joininfo_table(), "\n",
         "admininfo_table: ", config.admininfo_table())
     print("token: ", config.token())
+    print("admin: ", config.admin())
