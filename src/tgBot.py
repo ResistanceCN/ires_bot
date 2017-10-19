@@ -16,6 +16,7 @@ from telegram.ext import RegexHandler
 from telegram.ext import ConversationHandler
 from parseCfg import parseCfg
 from dbServer import dbControl
+import telegram
 import logging
 
 # Enable logging
@@ -27,34 +28,33 @@ logger = logging.getLogger(__name__)
 
 LANG, INGRESS_ID, AREA, OTHER, PUSH, TUTORIALS = range(6)
 
-# TODO: Read all admins member from database
-LIST_OF_ADMINS = [11111111]
-
-
 def restricted(func):
     @wraps(func)
     def wrapped(bot, update, *args, **kwargs):
-        user_id = update.effective_user.id
-        if user_id not in LIST_OF_ADMINS:
-            print('Unauthorized access denied for {}.'.format(user_id))
+        content['user_id'] = update.effective_user.id
+        if not db.checkAdmin(content):
+            logger.info('Unauthorized access denied for {}.'.format(user_id))
             return
         return func(bot, update, *args, **kwargs)
     return wrapped
 
 def start(bot, update):
     """Start the bot and check admin."""
-    user_id = update.effective_user.id
-    if user_id not in LIST_OF_ADMINS:
-        update.message.reply_text("""
-生鱼忧患，死鱼安乐，欢迎加入蓝色咸鱼军~
-你的 telegram id 是：%s
-(・ω・`| 使用 /help 查看教程
-(・ω・`| 使用 /join 填写表格""" % user_id)
-    else:
+    content['telegram_id'] = update.effective_user.id
+    if db.checkAdmin(content):
         update.message.reply_text("""
 欢迎管理员回来~
 (・ω・`| 使用 /help 查看教程
 (・ω・`| 使用 /check 查看表格""")
+    else:
+        update.message.reply_text("""
+生鱼忧患，死鱼安乐，欢迎加入蓝色咸鱼军~
+你的 telegram id 是：%s
+(・ω・`| 使用 /help 查看教程
+(・ω・`| 使用 /join 填写表格
+(・ω・`| 使用 /cancel 取消填写
+""" % content['telegram_id'])
+
 
 def help(bot, update):
     """Get the help."""
@@ -156,7 +156,7 @@ def other(bot, update):
     if language == 'English':
         reply_keyboard = [['Yes', 'No']]
         update.message.reply_text(
-            'Confirm whether to submit a message',
+            'Confirm whether to submit a message or /cancel ',
             reply_markup=ReplyKeyboardMarkup(
                 reply_keyboard, one_time_keyboard=True))
 
@@ -166,7 +166,6 @@ def push(bot, update):
     user = update.message.from_user
     pushstat = update.message.text
     logger.info("%s's message push status: %s" % (user.id, update.message.text))
-    # TODO: push to database and admin's telegram account
     if language == "Chinese":
         if pushstat == "是":
             update.message.reply_text(
@@ -178,13 +177,27 @@ def push(bot, update):
     if language == "English":
         if pushstat == "Yes":
             update.message.reply_text(
-                'push success', reply_markup=ReplyKeyboardRemove())
+                'submit success', reply_markup=ReplyKeyboardRemove())
         elif pushstat == "No":
             update.message.reply_text(
                 'cancel success', reply_markup=ReplyKeyboardRemove())
 
     if pushstat == "Yes" or "是":
         db.push(content)  # push to database
+        try:
+            telegram_id = db.pushAdminId(content)
+        except IndexError:
+            update.message.reply_text("Area does not exist")
+        # TODO: Multi-area check
+        for i in telegram_id:
+            bot.send_message(
+                i,
+                text="ingress_id: {}\ntelegram_username: {}\narea: {}\nother: {}"
+                    .format(
+                        content['ingress_id'],
+                        "@" + content['telegram_username'],
+                        content['area'],
+                        content['other']))
     return ConversationHandler.END
 
 # @restricted
@@ -211,6 +224,9 @@ def error(bot, update, error):
 
 def main(path):
     db.creat()  # creat tables
+    db.creatAdmin()
+
+    bot = telegram.Bot(config.token())
 
     updater = Updater(config.token())
 
@@ -255,8 +271,9 @@ def main(path):
     updater.idle()
 
 if __name__ == '__main__':
-    path = 'src/example.config.yml'
-    global content, config, db
+    path = 'example.config.yml'
+    global content, config, db, bot
+    # TODO: Resolve variable conflicts
     content = {}
     config = parseCfg(path)
     db = dbControl(config)
