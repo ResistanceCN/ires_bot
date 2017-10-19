@@ -1,4 +1,9 @@
+certifi==2017.7.27.1
+future==0.16.0
 pip==9.0.1
+PyGreSQL==5.0.4
+python-telegram-bot==8.1.1
+PyYAML==3.12
 redis==2.10.6
 setuptools==36.5.0
 wheel==0.30.0
