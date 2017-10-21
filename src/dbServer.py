@@ -20,7 +20,7 @@ class creatTable():
                 dbname=config.database(), user=config.user(),
                 passwd=config.password(), host=config.host())
         except ConnectionError:
-            logger.info("conntect postgre db failed")
+            logger.info("conntecting postgresql service failed")
             sys.exit(1)
 
     def creat(self):
@@ -90,30 +90,33 @@ class admin():
                     "admin: %s update telegram_username: %s area: %s" %
                     (i['telegram_id'], i['telegram_username'],i['area']))
 
-    def checkAdmin(self, content):
+    def checkAdmin(self, telegram_id):
         _check = self.db.query(
-            "SELECT telegram_id, area FROM admininfo WHERE telegram_id=\'{}\'".format(content['telegram_id']))
+            "SELECT telegram_id, area FROM admininfo WHERE telegram_id=\'{}\'"
+            .format(telegram_id))
         _check_id = _check.getresult()
         if _check_id == []:
             logger.info("telegram_id: %s is not admin" %
-                        content['telegram_id'])
+                        telegram_id)
             return False
         else:
-            logger.info("telegram_id: %s is admin" % content['telegram_id'])
+            logger.info("telegram_id: %s is admin" % telegram_id)
             return True
 
-    def pushAdminId(self, content):
-        _check = self.db.query(
-            "SELECT telegram_id FROM admininfo WHERE area=\'{}\'".format(content['area']))
-        _check_id = _check.getresult()
+    def getAdminId(self, content):
         telegram_id = []
-        if len(_check_id) == 0:
-            logger.info("telegram_id: {}, area {} doesn't existed".format(content['telegram_id'], content['area']))
-        else:
-            for i in _check_id:
-                telegram_id.append(i[0])
-            return telegram_id
-
+        for i in list(set(content['area'].replace(' ', '').split(','))):
+            _check = self.db.query(
+                "SELECT telegram_id FROM admininfo WHERE area=\'{}\'"
+                .format(i.upper()))
+            _check_id = _check.getresult()
+            if len(_check_id) == 0:
+                logger.info("telegram_id: {}, area {} doesn't existed"
+                    .format(content['telegram_id'], content['area']))
+            else:
+                for j in _check_id:
+                    telegram_id.append(j[0])
+        return telegram_id
 
 class dbControl(pushDB, creatTable, admin):
     pass
@@ -121,18 +124,18 @@ class dbControl(pushDB, creatTable, admin):
 
 if __name__ == '__main__':
     from parseCfg import parseCfg
-    path = 'src/example.config.yml'
+    path = 'src/config.example.yml'
     config = parseCfg(path)
     db = dbControl(config)
     db.creat()
     content = {
-        'area': 'T',
+        'area': 'T, b',
         'ingress_id': 'ArielAxionL',
         'other': 'Balthild',
         'telegram_id': '82814392',
         'telegram_username': 'ADA_Refactor'}
     db.push(content)
     db.creatAdmin()
-    db.checkAdmin(content)
-    telegram_id = db.pushAdminId(content)
+    db.checkAdmin(content['telegram_id'])
+    telegram_id = db.getAdminId(content)
     print(telegram_id)
