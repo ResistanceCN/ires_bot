@@ -16,6 +16,7 @@ from telegram.ext import RegexHandler
 from telegram.ext import ConversationHandler
 from parseCfg import parseCfg
 from dbServer import dbControl
+from cacheServer import cacheControl
 import telegram
 import logging
 
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 LANG, INGRESS_ID, AREA, OTHER, PUSH, TUTORIALS = range(6)
 
+
 def restricted(func):
     @wraps(func)
     def wrapped(bot, update, *args, **kwargs):
@@ -38,10 +40,11 @@ def restricted(func):
         return func(bot, update, *args, **kwargs)
     return wrapped
 
+
 def start(bot, update):
     """Start the bot and check admin."""
-    content['telegram_id'] = update.effective_user.id
-    if db.checkAdmin(content):
+    telegram_id = update.effective_user.id
+    if db.checkAdmin(telegram_id):
         update.message.reply_text("""
 欢迎管理员回来~
 (・ω・`| 使用 /help 查看教程
@@ -53,7 +56,7 @@ def start(bot, update):
 (・ω・`| 使用 /help 查看教程
 (・ω・`| 使用 /join 填写表格
 (・ω・`| 使用 /cancel 取消填写
-""" % content['telegram_id'])
+""" % telegram_id)
 
 
 def help(bot, update):
@@ -64,6 +67,7 @@ def help(bot, update):
         reply_markup=ReplyKeyboardMarkup(
             reply_keyboard, resize_keyboard=True))
     return TUTORIALS
+
 
 def tutorials(bot, update):
     """Show tutorial articles."""
@@ -86,11 +90,9 @@ def tutorials(bot, update):
             reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
 
+
 def join(bot, update):
     """Start to fill in the form."""
-    user_id = update.effective_user.id
-    content['telegram_id'] = user_id
-    content['telegram_username'] = update.effective_user.username
     reply_keyboard = [['English', 'Chinese']]
     update.message.reply_text(
         "Choose language",
@@ -102,9 +104,9 @@ def join(bot, update):
 def language(bot, update):
     """Get env language."""
     user = update.message.from_user
+    cache.hashset(user.id, language=update.message.text)
     logger.info("Language of %s: %s" % (user.id, update.message.text))
-    global language
-    language = update.message.text
+
     if update.message.text == 'English':
         update.message.reply_text(
             "Welcome to join us \n Enter your ingress_id: ",
@@ -118,22 +120,30 @@ def ingress_id(bot, update):
     "Get agent's ingress_id."
     user = update.message.from_user
     ingress_id = update.message.text
-    content['ingress_id'] = update.message.text
+    if "@" in ingress_id:
+        ingress_id = ingress_id.replace('@', '')
+    cache.hashset(user.id, ingress_id=ingress_id)
     logger.info("Ingress_id of %s: %s" % (user.id, ingress_id))
+    language = cache.hashget(user.id, 'language')
+
     if language == 'English':
         update.message.reply_text(
-            'Map here: https://google.map.com&token \nEnter the area tag:')
+            'Map here: https://google.map.com&token \n\
+            Enter the area tag, multiple area are separated by \',\'')
     if language == 'Chinese':
         update.message.reply_text(
-            '区域地图: https://google.map.com&token \n输入你所在的区域编号')
+            '区域地图: https://google.map.com&token \n\
+            输入你所在的区域编号，多个区域请以英文逗号分隔')
     return AREA
+
 
 def location(bot, update):
     """Get the agent's area."""
     user = update.message.from_user
-    area = update.message.text
-    content['area'] = update.message.text
-    logger.info("Location of %s: %s" % (user.id, area))
+    cache.hashset(user.id, area=update.message.text)
+    logger.info("Location of %s: %s" % (user.id, update.message.text))
+    language = cache.hashget(user.id, 'language')
+
     if language == 'English':
         update.message.reply_text(
             'You may already know some players, please enter their names')
@@ -141,15 +151,22 @@ def location(bot, update):
         update.message.reply_text('你可能已经认识一些玩家，请输入他们的名字')
     return OTHER
 
+
 def other(bot, update):
     user = update.message.from_user
-    relationship = update.message.text
-    content['other'] = update.message.text
+    cache.hashset(user.id, other=update.message.text)
     logger.info("Other players of %s: %s" % (user.id, update.message.text))
+
+    str_tmp = ''
+    for key, value in cache.hashgetall(user.id).items():
+        str_tmp += key + ':' + value + '\n'
+    update.message.reply_text(str_tmp)
+
+    language = cache.hashget(user.id, 'language')
     if language == 'Chinese':
         reply_keyboard = [['是', '否']]
         update.message.reply_text(
-            '确认是否提交信息',
+            '确认是否提交信息，/cancel 退出填表',
             reply_markup=ReplyKeyboardMarkup(
                 reply_keyboard, one_time_keyboard=True))
 
@@ -162,37 +179,47 @@ def other(bot, update):
 
     return PUSH
 
+
 def push(bot, update):
     user = update.message.from_user
+    cache.hashset(user.id, telegram_username=user.username)
+    logger.info("%s's message push status: %s" %
+                (user.id, update.message.text))
     pushstat = update.message.text
-    logger.info("%s's message push status: %s" % (user.id, update.message.text))
-    if language == "Chinese":
-        if pushstat == "是":
-            update.message.reply_text(
-                '提交成功', reply_markup=ReplyKeyboardRemove())
-        elif pushstat == "否":
-            update.message.reply_text(
-                '已取消', reply_markup=ReplyKeyboardRemove())
+    language = cache.hashget(user.id, 'language')
 
-    if language == "English":
-        if pushstat == "Yes":
-            update.message.reply_text(
-                'submit success', reply_markup=ReplyKeyboardRemove())
-        elif pushstat == "No":
-            update.message.reply_text(
-                'cancel success', reply_markup=ReplyKeyboardRemove())
-
-    if pushstat == "Yes" or "是":
+    if pushstat == "否":
+        update.message.reply_text(
+            '已取消', reply_markup=ReplyKeyboardRemove())
+    elif pushstat == "No":
+        update.message.reply_text(
+            'Cancel success', reply_markup=ReplyKeyboardRemove())
+    elif pushstat == "Yes" or "是":
+        content = cache.hashgetall(user.id)
+        content['telegram_id'] = user.id
         db.push(content)  # push to database
-        try:
-            telegram_id = db.pushAdminId(content)
-        except IndexError:
-            update.message.reply_text("Area does not exist")
-        # TODO: Multi-area check
-        for i in telegram_id:
-            bot.send_message(
-                i,
-                text="ingress_id: {}\ntelegram_username: {}\narea: {}\nother: {}"
+        cache.hashclean(user.id)  # clean cache
+        telegram_id = db.getAdminId(content)
+        if telegram_id == []:
+            if language == 'English':
+                update.message.reply_text(
+                    "Area does not exist, /join again",
+                     reply_markup=ReplyKeyboardRemove())
+            elif language == 'Chinese':
+                update.message.reply_text(
+                "区域不存在，请重新 /join",
+                reply_markup=ReplyKeyboardRemove())
+        else:
+            if language == 'English':
+                update.message.reply_text(
+                    'Submit success!', reply_markup=ReplyKeyboardRemove())
+            if language == 'Chinese':
+                update.message.reply_text(
+                    '提交成功', reply_markup=ReplyKeyboardRemove())
+            for i in telegram_id:
+                bot.send_message(
+                    i,
+                    text="ingress_id: {}\ntelegram_username: {}\narea: {}\nother: {}"
                     .format(
                         content['ingress_id'],
                         "@" + content['telegram_username'],
@@ -203,6 +230,7 @@ def push(bot, update):
 # @restricted
 # def check(bot, update):
 #     # TODO: Get the unchecked info from database.
+
 
 def cancel(bot, update):
     user = update.message.from_user
@@ -270,11 +298,13 @@ def main(path):
 
     updater.idle()
 
+
 if __name__ == '__main__':
-    path = 'example.config.yml'
-    global content, config, db, bot
+    path = 'src/config.example.yml'
+    global cache, config, db, bot
     # TODO: Resolve variable conflicts
     content = {}
     config = parseCfg(path)
     db = dbControl(config)
+    cache = cacheControl(config)
     main(path)
