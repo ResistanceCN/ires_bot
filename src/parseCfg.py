@@ -72,7 +72,22 @@ class tgBotCfg():
             logger.info("Telegram admin_id doesn't existed")
         return admin
 
-class parseCfg(psqlCfg, tgBotCfg):
+class redisCfg():
+    def addr(self):
+        try:
+            addr = self.content['redis']['addr']
+        except IndexError:
+            logger.info("Redis addr error")
+        return addr
+
+    def redispasswd(self):
+        try:
+            redispasswd = self.content['redis']['redispasswd']
+        except IndexError:
+            logger.info("Redis password error")
+        return redispasswd
+
+class parseCfg(psqlCfg, tgBotCfg, redisCfg):
     def __init__(self, path):
         self.path = path
         try:
@@ -83,7 +98,7 @@ class parseCfg(psqlCfg, tgBotCfg):
             sys.exit(1)
 
 if __name__ == '__main__':
-    path = 'src/example.config.yml'
+    path = 'src/config.example.yml'
     config = parseCfg(path)
     print(
         "host: ", config.host(), "\n",
