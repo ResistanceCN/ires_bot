@@ -117,17 +117,18 @@ class admin():
 
         with self.db.cursor() as cur:
             for i in list(set(content['area'].replace(' ', '').split(','))):
-                _check = cur.execute(
-                    "SELECT telegram_id FROM admininfo WHERE area ILIKE \'{}\'"
-                    .format('%' + i.upper() + '%'))
-                for row in cur.fetchall():
-                    if len(row) == 0:
-                        logger.info(
-                            "telegram_id: {}, area {} doesn't existed"
-                            .format(content['telegram_id'], content['area']))
-                        pass
-                    else:
-                        telegram_id.append(dict(zip(columns, row))['telegram_id'])
+                if i != []:
+                    _check = cur.execute(
+                        "SELECT telegram_id FROM admininfo WHERE area ILIKE \'{}\'"
+                        .format('%' + i.upper() + '%'))
+                    for row in cur.fetchall():
+                        if len(row) == 0:
+                            logger.info(
+                                "telegram_id: {}, area {} doesn't existed"
+                                .format(content['telegram_id'], content['area']))
+                            pass
+                        else:
+                            telegram_id.append(dict(zip(columns, row))['telegram_id'])
             return telegram_id
 
     def checkNew(self, area):
