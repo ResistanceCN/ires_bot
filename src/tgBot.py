@@ -19,6 +19,7 @@ from dbServer import dbControl
 from cacheServer import cacheControl
 import telegram
 import logging
+import re
 
 # Enable logging
 logging.basicConfig(
@@ -128,22 +129,30 @@ def ingress_id(bot, update):
 
     if language == 'English':
         update.message.reply_text(
-            'Map here: https://google.map.com&token \n\
-            Enter the area tag, multiple area are separated by \',\'')
+            'Map here: https://google.map.com&token \nEnter the area tag, multiple area are separated by \',\'')
     if language == 'Chinese':
         update.message.reply_text(
-            '区域地图: https://google.map.com&token \n\
-            输入你所在的区域编号，多个区域请以英文逗号分隔')
+            '区域地图: https://google.map.com&token \n输入你所在的区域编号，多个区域请以英文逗号分隔')
     return AREA
 
 
 def location(bot, update):
     """Get the agent's area."""
     user = update.message.from_user
-    cache.hashset(user.id, area=update.message.text)
-    logger.info("Location of %s: %s" % (user.id, update.message.text))
-    language = cache.hashget(user.id, 'language')
 
+    area = ''
+    row = list(set(update.message.text.replace(' ', '').split(',')))[:10]
+    for i in row:
+        area_tmp = re.search(r'^[a-zA-Z]$', i)
+        if area_tmp is not None:
+            area_tmp = area_tmp.group().upper()
+            area += area_tmp + ','
+
+    cache.hashset(user.id, area=area)
+
+    logger.info("Location of %s: %s" % (user.id, update.message.text))
+
+    language = cache.hashget(user.id, 'language')
     if language == 'English':
         update.message.reply_text(
             'You may already know some players, please enter their names')
