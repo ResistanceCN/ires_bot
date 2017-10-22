@@ -14,9 +14,9 @@ from telegram.ext import MessageHandler
 from telegram.ext import Filters
 from telegram.ext import RegexHandler
 from telegram.ext import ConversationHandler
-from .parseCfg import parseCfg
-from .dbServer import dbControl
-from .cacheServer import cacheControl
+from parseCfg import parseCfg
+from dbServer import dbControl
+from cacheServer import cacheControl
 from functools import wraps
 import telegram
 import logging

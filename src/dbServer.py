@@ -121,7 +121,7 @@ class dbControl(pushDB, creatTable, admin):
 
 
 if __name__ == '__main__':
-    from .parseCfg import parseCfg
+    from parseCfg import parseCfg
 
     path = 'src/config.example.yml'
     config = parseCfg(path)
