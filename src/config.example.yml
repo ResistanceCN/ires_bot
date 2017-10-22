@@ -3,7 +3,7 @@ postgres:
     database: cantonres
     user: kevin
     password: foobar
-    joininfo_table: CREATE TABLE joininfo (id SERIAL PRIMARY KEY,
+    joininfo_table: CREATE TABLE IF NOT EXISTS joininfo (id SERIAL PRIMARY KEY,
         ingress_id VARCHAR(35) NOT NULL,
         telegram_id BIGINT NOT NULL,
         telegram_username VARCHAR(35) NOT NULL,
@@ -11,7 +11,7 @@ postgres:
         other VARCHAR(50),
         created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)
     admininfo_table:
-        CREATE TABLE admininfo (id SERIAL PRIMARY KEY,
+        CREATE TABLE IF NOT EXISTS admininfo (id SERIAL PRIMARY KEY,
         telegram_id BIGINT NOT NULL,
         telegram_username VARCHAR(35) NOT NULL,
         area VARCHAR(10) NOT NULL,
