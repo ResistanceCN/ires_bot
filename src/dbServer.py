@@ -51,16 +51,14 @@ class pushDB():
             sys.exit(1)
 
     def push(self, content):
-        _check = self.db.query(
-            "SELECT id FROM joininfo WHERE ingress_id=\'{}\';".format(content['ingress_id']))
+        _check = self.db.query("SELECT id FROM joininfo WHERE ingress_id=%s", (content['ingress_id'],))
         _check_id = _check.getresult()
         if len(_check_id) == 0:
             self.db.insert('joininfo', ingress_id=content['ingress_id'], telegram_id=content['telegram_id'],
                            telegram_username=content['telegram_username'], area=content['area'], other=content['other'])
         else:
-            self.db.query(
-                "UPDATE joininfo SET telegram_username=\'{}\', area=\'{}\', other=\'{}\' WHERE ingress_id=\'{}\';".format(
-                    content['telegram_username'], content['area'], content['other'], content['ingress_id']))
+            self.db.query("UPDATE joininfo SET telegram_username=%s, area=%s, other=%s WHERE ingress_id=%s",
+                          (content['telegram_username'], content['area'], content['other'], content['ingress_id'],))
 
 
 class admin():
@@ -76,8 +74,7 @@ class admin():
 
     def creatAdmin(self):
         for i in self.config.admin():
-            _check = self.db.query(
-                "SELECT telegram_id FROM admininfo WHERE telegram_id=\'{}\';".format(i['telegram_id']))
+            _check = self.db.query("SELECT telegram_id FROM admininfo WHERE telegram_id=%s", (i['telegram_id'],))
             _check_id = _check.getresult()
             if len(_check_id) == 0:
                 self.db.insert(
@@ -86,16 +83,15 @@ class admin():
                 logger.info("add admin member: %s" % i)
             else:
                 self.db.query(
-                    "UPDATE admininfo SET telegram_username=\'{}\', area=\'{}\' WHERE telegram_id=\'{}\';".format(
-                        i['telegram_username'], i['area'], i['telegram_id']))
+                    "UPDATE admininfo SET telegram_username=%s, area=%s WHERE telegram_id=%s",
+                    (i['telegram_username'], i['area'], i['telegram_id'],))
                 logger.info(
                     "admin: %s update telegram_username: %s area: %s" %
                     (i['telegram_id'], i['telegram_username'], i['area']))
 
     def checkAdmin(self, telegram_id):
         _check = self.db.query(
-            "SELECT telegram_id, area FROM admininfo WHERE telegram_id=\'{}\'"
-                .format(telegram_id))
+            "SELECT telegram_id, area FROM admininfo WHERE telegram_id=%s", (telegram_id,))
         _check_id = _check.getresult()
         if _check_id == []:
             logger.info("telegram_id: %s is not admin" %
@@ -109,8 +105,7 @@ class admin():
         telegram_id = []
         for i in list(set(content['area'].replace(' ', '').split(','))):
             _check = self.db.query(
-                "SELECT telegram_id FROM admininfo WHERE area=\'{}\'"
-                    .format(i.upper()))
+                "SELECT telegram_id FROM admininfo WHERE area=%s", (i.upper(),))
             _check_id = _check.getresult()
             if len(_check_id) == 0:
                 logger.info("telegram_id: {}, area {} doesn't existed"
