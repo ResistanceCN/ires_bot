@@ -112,12 +112,12 @@ class admin():
 
     def getAdminId(self, content):
         """Get admin telegram_id."""
-        telegram_id = []
         columns = ['telegram_id']
 
         with self.db.cursor() as cur:
+            telegram_id = []
             for i in list(set(content['area'].replace(' ', '').split(','))):
-                if i != []:
+                if i != '':
                     _check = cur.execute(
                         "SELECT telegram_id FROM admininfo WHERE area ILIKE \'{}\'"
                         .format('%' + i.upper() + '%'))
@@ -154,12 +154,12 @@ class dbControl(pushDB, creatTable, admin):
 if __name__ == '__main__':
     from parseCfg import parseCfg
 
-    path = 'config.example.yml'
+    path = '../config.example.yml'
     config = parseCfg(path)
     db = dbControl(config)
     db.creat()
     content = {
-        'area': 'T, b',
+        'area': 't, B',
         'ingress_id': 'ArielAxionL',
         'other': 'Balthild',
         'telegram_id': '82814392',
@@ -169,4 +169,4 @@ if __name__ == '__main__':
     db.checkAdmin(content['telegram_id'])
     telegram_id = db.getAdminId(content)
     print(telegram_id)
-    print(db.checkNew('%B%'))
+    # print(db.checkNew('%B%'))
