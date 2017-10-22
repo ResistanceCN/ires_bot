@@ -15,3 +15,13 @@
     └── tgBot.py
         > Collect and push messages
 ```
+
+## Use
+
+Before you run this bot, you need to configure the postgresql and redis, then copy `config.example.yml` as `config.yml` to fill in your configuration.
+
+```shell
+pip install -r requirements.txt
+cd src
+python3 tgBot.py
+```
