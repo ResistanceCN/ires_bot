@@ -58,8 +58,9 @@ class pushDB():
             self.db.insert('joininfo', ingress_id=content['ingress_id'], telegram_id=content['telegram_id'],
                            telegram_username=content['telegram_username'], area=content['area'], other=content['other'])
         else:
-            self.db.query("UPDATE joininfo SET telegram_username=\'{}\', area=\'{}\', other=\'{}\' WHERE ingress_id=\'{}\';".format(
-                content['telegram_username'], content['area'], content['other'], content['ingress_id']))
+            self.db.query(
+                "UPDATE joininfo SET telegram_username=\'{}\', area=\'{}\', other=\'{}\' WHERE ingress_id=\'{}\';".format(
+                    content['telegram_username'], content['area'], content['other'], content['ingress_id']))
 
 
 class admin():
@@ -85,15 +86,16 @@ class admin():
                 logger.info("add admin member: %s" % i)
             else:
                 self.db.query(
-                    "UPDATE admininfo SET telegram_username=\'{}\', area=\'{}\' WHERE telegram_id=\'{}\';".format(i['telegram_username'], i['area'], i['telegram_id']))
+                    "UPDATE admininfo SET telegram_username=\'{}\', area=\'{}\' WHERE telegram_id=\'{}\';".format(
+                        i['telegram_username'], i['area'], i['telegram_id']))
                 logger.info(
                     "admin: %s update telegram_username: %s area: %s" %
-                    (i['telegram_id'], i['telegram_username'],i['area']))
+                    (i['telegram_id'], i['telegram_username'], i['area']))
 
     def checkAdmin(self, telegram_id):
         _check = self.db.query(
             "SELECT telegram_id, area FROM admininfo WHERE telegram_id=\'{}\'"
-            .format(telegram_id))
+                .format(telegram_id))
         _check_id = _check.getresult()
         if _check_id == []:
             logger.info("telegram_id: %s is not admin" %
@@ -108,15 +110,16 @@ class admin():
         for i in list(set(content['area'].replace(' ', '').split(','))):
             _check = self.db.query(
                 "SELECT telegram_id FROM admininfo WHERE area=\'{}\'"
-                .format(i.upper()))
+                    .format(i.upper()))
             _check_id = _check.getresult()
             if len(_check_id) == 0:
                 logger.info("telegram_id: {}, area {} doesn't existed"
-                    .format(content['telegram_id'], content['area']))
+                            .format(content['telegram_id'], content['area']))
             else:
                 for j in _check_id:
                     telegram_id.append(j[0])
         return telegram_id
+
 
 class dbControl(pushDB, creatTable, admin):
     pass
@@ -124,6 +127,7 @@ class dbControl(pushDB, creatTable, admin):
 
 if __name__ == '__main__':
     from .parseCfg import parseCfg
+
     path = 'src/config.example.yml'
     config = parseCfg(path)
     db = dbControl(config)

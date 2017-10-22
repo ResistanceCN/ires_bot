@@ -39,6 +39,7 @@ def restricted(func):
             logger.info('Unauthorized access denied for {}.'.format(content['user_id']))
             return
         return func(bot, update, *args, **kwargs)
+
     return wrapped
 
 
@@ -205,11 +206,11 @@ def push(bot, update):
             if language == 'English':
                 update.message.reply_text(
                     "Area does not exist, /join again",
-                     reply_markup=ReplyKeyboardRemove())
+                    reply_markup=ReplyKeyboardRemove())
             elif language == 'Chinese':
                 update.message.reply_text(
-                "区域不存在，请重新 /join",
-                reply_markup=ReplyKeyboardRemove())
+                    "区域不存在，请重新 /join",
+                    reply_markup=ReplyKeyboardRemove())
         else:
             if language == 'English':
                 update.message.reply_text(
@@ -221,12 +222,13 @@ def push(bot, update):
                 bot.send_message(
                     i,
                     text="ingress_id: {}\ntelegram_username: {}\narea: {}\nother: {}"
-                    .format(
+                        .format(
                         content['ingress_id'],
                         "@" + content['telegram_username'],
                         content['area'],
                         content['other']))
     return ConversationHandler.END
+
 
 # @restricted
 # def check(bot, update):
@@ -254,13 +256,8 @@ def error(bot, update, error):
 def main(path):
     db.creat()  # creat tables
     db.creatAdmin()
-
-    bot = telegram.Bot(config.token())
-
     updater = Updater(config.token())
-
     dp = updater.dispatcher
-
     help_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('help', help)],
         states={
@@ -269,34 +266,22 @@ def main(path):
         },
         fallbacks=[CommandHandler('cancel', cancel)]
     )
-
     join_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('join', join)],
-
         states={
             LANG: [RegexHandler('^(English|Chinese)$', language)],
-
             INGRESS_ID: [MessageHandler(Filters.text, ingress_id)],
-
             AREA: [MessageHandler(Filters.text, location)],
-
             OTHER: [MessageHandler(Filters.text, other)],
-
             PUSH: [RegexHandler('^(Yes|No|是|否)$', push)]
         },
         fallbacks=[CommandHandler('cancel', cancel)]
     )
-
     dp.add_handler(CommandHandler('start', start))
-
     dp.add_handler(help_conv_handler)
-
     dp.add_handler(join_conv_handler)
-
     dp.add_error_handler(error)
-
     updater.start_polling()
-
     updater.idle()
 
 

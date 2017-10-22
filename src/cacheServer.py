@@ -11,6 +11,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
 class cacheControl(object):
     def __init__(self, config):
         self.config = config
@@ -51,8 +52,10 @@ class cacheControl(object):
         self.cache.flushdb()
         logger.info("flush all cache")
 
+
 if __name__ == '__main__':
     from .parseCfg import parseCfg
+
     path = 'src/config.example.yml'
     config = parseCfg(path)
     cache = cacheControl(config)
