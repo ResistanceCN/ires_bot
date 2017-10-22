@@ -22,6 +22,5 @@ Before you run this bot, you need to configure the postgresql and redis, then co
 
 ```shell
 pip install -r requirements.txt
-cd src
 python3 tgBot.py
 ```
