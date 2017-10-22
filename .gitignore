@@ -1,5 +1,6 @@
-bin 
-include 
-lib 
+bin
+include
+lib
 pip-selfcheck.json
 src/__pycache__/
+.idea
