@@ -20,6 +20,7 @@ from cacheServer import cacheControl
 from functools import wraps
 import telegram
 import logging
+import re
 
 # Enable logging
 logging.basicConfig(
@@ -28,18 +29,19 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-LANG, INGRESS_ID, AREA, OTHER, PUSH, TUTORIALS = range(6)
+INGRESS_ID, AREA, OTHER, PUSH, TUTORIALS, CHECK_AREA= range(6)
 
 
 def restricted(func):
     @wraps(func)
     def wrapped(bot, update, *args, **kwargs):
-        content['user_id'] = update.effective_user.id
-        if not db.checkAdmin(content):
-            logger.info('Unauthorized access denied for {}.'.format(content['user_id']))
+        user = update.message.from_user
+        if not db.checkAdmin(user.id):
+            logger.info(
+                'Unauthorized access denied for {}.'
+                .format(user.id))
             return
         return func(bot, update, *args, **kwargs)
-
     return wrapped
 
 
@@ -50,7 +52,9 @@ def start(bot, update):
         update.message.reply_text("""
 欢迎管理员回来~
 (・ω・`| 使用 /help 查看教程
-(・ω・`| 使用 /check 查看表格""")
+(・ω・`| 使用 /check 查看表格
+(・ω・`| 使用 /join 填写表格
+(・ω・`| 使用 /cancel 取消填写""")
     else:
         update.message.reply_text("""
 生鱼忧患，死鱼安乐，欢迎加入蓝色咸鱼军~
@@ -95,26 +99,8 @@ def tutorials(bot, update):
 
 def join(bot, update):
     """Start to fill in the form."""
-    reply_keyboard = [['English', 'Chinese']]
     update.message.reply_text(
-        "Choose language",
-        reply_markup=ReplyKeyboardMarkup(
-            reply_keyboard, one_time_keyboard=True))
-    return LANG
-
-
-def language(bot, update):
-    """Get env language."""
-    user = update.message.from_user
-    cache.hashset(user.id, language=update.message.text)
-    logger.info("Language of %s: %s" % (user.id, update.message.text))
-
-    if update.message.text == 'English':
-        update.message.reply_text(
-            "Welcome to join us \n Enter your ingress_id: ",
-            reply_markup=ReplyKeyboardRemove())
-    elif update.message.text == 'Chinese':
-        update.message.reply_text("欢迎加入我们! 请输入你的 Ingress_id: ")
+        "欢迎加入我们! 请输入你的 Ingress_id: ")
     return INGRESS_ID
 
 
@@ -122,39 +108,38 @@ def ingress_id(bot, update):
     "Get agent's ingress_id."
     user = update.message.from_user
     ingress_id = update.message.text
+
     if "@" in ingress_id:
         ingress_id = ingress_id.replace('@', '')
     cache.hashset(user.id, ingress_id=ingress_id)
     logger.info("Ingress_id of %s: %s" % (user.id, ingress_id))
-    language = cache.hashget(user.id, 'language')
 
-    if language == 'English':
-        update.message.reply_text(
-            'Map here: https://google.map.com&token \n\
-            Enter the area tag, multiple area are separated by \',\'')
-    if language == 'Chinese':
-        update.message.reply_text(
-            '区域地图: https://google.map.com&token \n\
-            输入你所在的区域编号，多个区域请以英文逗号分隔')
+    update.message.reply_text(
+        '区域地图: https://google.map.com&token \n输入你所在的区域编号，多个区域请以英文逗号分隔')
     return AREA
 
 
 def location(bot, update):
     """Get the agent's area."""
     user = update.message.from_user
-    cache.hashset(user.id, area=update.message.text)
-    logger.info("Location of %s: %s" % (user.id, update.message.text))
-    language = cache.hashget(user.id, 'language')
 
-    if language == 'English':
-        update.message.reply_text(
-            'You may already know some players, please enter their names')
-    if language == 'Chinese':
-        update.message.reply_text('你可能已经认识一些玩家，请输入他们的名字')
+    area = ''
+    row = list(set(update.message.text.replace(' ', '').split(',')))[:10]
+    for i in row:
+        area_tmp = re.search(r'^[a-zA-Z]$', i)
+        if area_tmp is not None:
+            area_tmp = area_tmp.group()
+            area += area_tmp.upper() + ','
+
+    cache.hashset(user.id, area=area)
+    logger.info("Location of %s: %s" % (user.id, update.message.text))
+    update.message.reply_text(
+        '其他信息:\n比如你可能已经认识一些玩家，填写他们的 ingress_id')
     return OTHER
 
 
 def other(bot, update):
+    """Other info."""
     user = update.message.from_user
     cache.hashset(user.id, other=update.message.text)
     logger.info("Other players of %s: %s" % (user.id, update.message.text))
@@ -164,65 +149,45 @@ def other(bot, update):
         str_tmp += key + ':' + value + '\n'
     update.message.reply_text(str_tmp)
 
-    language = cache.hashget(user.id, 'language')
-    if language == 'Chinese':
-        reply_keyboard = [['是', '否']]
-        update.message.reply_text(
-            '确认是否提交信息，/cancel 退出填表',
-            reply_markup=ReplyKeyboardMarkup(
-                reply_keyboard, one_time_keyboard=True))
-
-    if language == 'English':
-        reply_keyboard = [['Yes', 'No']]
-        update.message.reply_text(
-            'Confirm whether to submit a message or /cancel ',
-            reply_markup=ReplyKeyboardMarkup(
-                reply_keyboard, one_time_keyboard=True))
+    reply_keyboard = [['是', '否']]
+    update.message.reply_text(
+        '确认是否提交信息，/cancel 退出填表',
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard, one_time_keyboard=True))
 
     return PUSH
 
 
 def push(bot, update):
+    """Push cache to database and admin"""
     user = update.message.from_user
+
     cache.hashset(user.id, telegram_username=user.username)
     logger.info("%s's message push status: %s" %
                 (user.id, update.message.text))
     pushstat = update.message.text
-    language = cache.hashget(user.id, 'language')
 
     if pushstat == "否":
         update.message.reply_text(
             '已取消', reply_markup=ReplyKeyboardRemove())
-    elif pushstat == "No":
-        update.message.reply_text(
-            'Cancel success', reply_markup=ReplyKeyboardRemove())
-    elif pushstat == "Yes" or "是":
+    elif pushstat == "是":
         content = cache.hashgetall(user.id)
         content['telegram_id'] = user.id
         db.push(content)  # push to database
         cache.hashclean(user.id)  # clean cache
         telegram_id = db.getAdminId(content)
         if telegram_id == []:
-            if language == 'English':
-                update.message.reply_text(
-                    "Area does not exist, /join again",
-                    reply_markup=ReplyKeyboardRemove())
-            elif language == 'Chinese':
-                update.message.reply_text(
-                    "区域不存在，请重新 /join",
-                    reply_markup=ReplyKeyboardRemove())
+            update.message.reply_text(
+                "区域不存在，请重新 /join",
+                reply_markup=ReplyKeyboardRemove())
         else:
-            if language == 'English':
-                update.message.reply_text(
-                    'Submit success!', reply_markup=ReplyKeyboardRemove())
-            if language == 'Chinese':
-                update.message.reply_text(
-                    '提交成功', reply_markup=ReplyKeyboardRemove())
+            update.message.reply_text(
+                '提交成功', reply_markup=ReplyKeyboardRemove())
             for i in telegram_id:
                 bot.send_message(
                     i,
                     text="ingress_id: {}\ntelegram_username: {}\narea: {}\nother: {}"
-                        .format(
+                    .format(
                         content['ingress_id'],
                         "@" + content['telegram_username'],
                         content['area'],
@@ -230,22 +195,51 @@ def push(bot, update):
     return ConversationHandler.END
 
 
-# @restricted
-# def check(bot, update):
-#     # TODO: Get the unchecked info from database.
+@restricted
+def check(bot, update):
+    """Check the latest three forms."""
+    update.message.reply_text(
+        "输入要检查的区域，多个区域之间请用英文逗号隔开")
+    return CHECK_AREA
+
+@restricted
+def check_result(bot, update):
+    """Get the check results"""
+    user = update.message.from_user
+
+    area = []
+    row = list(set(update.message.text.replace(' ', '').split(',')))[:10]
+    for i in row:
+        area_tmp = re.search(r'^[a-zA-Z]$', i)
+        if area_tmp is not None:
+            area_tmp = area_tmp.group().upper()
+            area.append(area_tmp)
+
+    for j in area:
+        results = db.checkNew('%' + j + '%')
+        if results != []:
+            for result in results:
+                update.message.reply_text(
+                    "ingress_id: {}\ntelegram_username: {}\narea: {}\nother: {}"
+                    .format(
+                        result['ingress_id'],
+                        "@" + result['telegram_username'],
+                        result['area'],
+                        result['other']))
+            return ConversationHandler.END
+        else:
+            update.message.reply_text(
+                "该区域还没有表单或您不具备检查区域表单的权限，使用 /check 重新提交")
+            return ConversationHandler.END
 
 
 def cancel(bot, update):
     user = update.message.from_user
     logger.info("User %s canceled the conversation." % user.id)
-    if language == 'English':
-        update.message.reply_text(
-            'Has been out of state',
-            reply_markup=ReplyKeyboardRemove())
-    if language == 'Chinese':
-        update.message.reply_text(
-            '已退出状态',
-            reply_markup=ReplyKeyboardRemove())
+
+    update.message.reply_text(
+        '已退出状态',
+        reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
 
 
@@ -258,6 +252,7 @@ def main(path):
     db.creatAdmin()
     updater = Updater(config.token())
     dp = updater.dispatcher
+
     help_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('help', help)],
         states={
@@ -266,20 +261,30 @@ def main(path):
         },
         fallbacks=[CommandHandler('cancel', cancel)]
     )
+
     join_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('join', join)],
         states={
-            LANG: [RegexHandler('^(English|Chinese)$', language)],
             INGRESS_ID: [MessageHandler(Filters.text, ingress_id)],
             AREA: [MessageHandler(Filters.text, location)],
             OTHER: [MessageHandler(Filters.text, other)],
-            PUSH: [RegexHandler('^(Yes|No|是|否)$', push)]
+            PUSH: [RegexHandler('^(是|否)$', push)]
         },
         fallbacks=[CommandHandler('cancel', cancel)]
     )
+
+    check_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('check', check)],
+        states={
+            CHECK_AREA: [MessageHandler(Filters.text, check_result)]
+        },
+        fallbacks=[CommandHandler('cancel', cancel)]
+    )
+
     dp.add_handler(CommandHandler('start', start))
     dp.add_handler(help_conv_handler)
     dp.add_handler(join_conv_handler)
+    dp.add_handler(check_conv_handler)
     dp.add_error_handler(error)
     updater.start_polling()
     updater.idle()
