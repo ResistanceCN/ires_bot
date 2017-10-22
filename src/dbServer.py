@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 from pg import DB
+import sys
 import logging
-import logging.config
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -123,7 +123,7 @@ class dbControl(pushDB, creatTable, admin):
 
 
 if __name__ == '__main__':
-    from parseCfg import parseCfg
+    from .parseCfg import parseCfg
     path = 'src/config.example.yml'
     config = parseCfg(path)
     db = dbControl(config)

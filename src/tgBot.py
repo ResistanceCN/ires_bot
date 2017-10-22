@@ -14,9 +14,10 @@ from telegram.ext import MessageHandler
 from telegram.ext import Filters
 from telegram.ext import RegexHandler
 from telegram.ext import ConversationHandler
-from parseCfg import parseCfg
-from dbServer import dbControl
-from cacheServer import cacheControl
+from .parseCfg import parseCfg
+from .dbServer import dbControl
+from .cacheServer import cacheControl
+from functools import wraps
 import telegram
 import logging
 
@@ -35,7 +36,7 @@ def restricted(func):
     def wrapped(bot, update, *args, **kwargs):
         content['user_id'] = update.effective_user.id
         if not db.checkAdmin(content):
-            logger.info('Unauthorized access denied for {}.'.format(user_id))
+            logger.info('Unauthorized access denied for {}.'.format(content['user_id']))
             return
         return func(bot, update, *args, **kwargs)
     return wrapped
@@ -247,7 +248,7 @@ def cancel(bot, update):
 
 
 def error(bot, update, error):
-    logger.warn('Update "%s" caused error "%s"' % (update, error))
+    logger.warning('Update "%s" caused error "%s"' % (update, error))
 
 
 def main(path):

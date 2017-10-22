@@ -3,7 +3,7 @@
 
 import redis
 import logging
-import logging.config
+import sys
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -34,6 +34,7 @@ class cacheControl(object):
                     "{}".format(value))
 
     def hashget(self, telegram_id, *args):
+        cache = ''
         for arg in args:
             cache = self.cache.hget(telegram_id, arg)
         return cache
@@ -51,7 +52,7 @@ class cacheControl(object):
         logger.info("flush all cache")
 
 if __name__ == '__main__':
-    from parseCfg import parseCfg
+    from .parseCfg import parseCfg
     path = 'src/config.example.yml'
     config = parseCfg(path)
     cache = cacheControl(config)
