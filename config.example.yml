@@ -20,7 +20,7 @@ bot:
     token: 265836060:AAFUAYbxHfYgVbrOx8R3bOJMxPPBM-2IO_M
     admin:
         - {"telegram_id": "250578776", "telegram_username": "SiriusSee", "area": "T"}
-        - {"telegram_id": "82814392", "telegram_username": "ArielAxionL", "area": "B"}
+        - {"telegram_id": "82814392", "telegram_username": "ArielAxionL", "area": "B, T"}
 redis:
     addr: localhost
     redispasswd: foobar
