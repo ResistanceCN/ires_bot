@@ -291,7 +291,7 @@ def main(path):
 
 
 if __name__ == '__main__':
-    path = '../config.example.yml'
+    path = '../config.yml'
     global cache, config, db, bot
     # TODO: Resolve variable conflicts
     content = {}
