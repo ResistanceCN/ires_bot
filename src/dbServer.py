@@ -115,6 +115,8 @@ class admin():
                         telegram_id.append(j[0])
         return telegram_id
 
+    def checkNew(self, telegram_id):
+        # TODO: 
 
 class dbControl(pushDB, creatTable, admin):
     pass
@@ -123,7 +125,7 @@ class dbControl(pushDB, creatTable, admin):
 if __name__ == '__main__':
     from parseCfg import parseCfg
 
-    path = 'src/config.example.yml'
+    path = '../config.example.yml'
     config = parseCfg(path)
     db = dbControl(config)
     db.creat()

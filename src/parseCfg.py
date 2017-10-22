@@ -113,7 +113,7 @@ class parseCfg(psqlCfg, tgBotCfg, redisCfg):
 
 
 if __name__ == '__main__':
-    path = 'src/config.example.yml'
+    path = '../config.example.yml'
     config = parseCfg(path)
     print(
         "host: ", config.host(), "\n",
