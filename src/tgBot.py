@@ -193,9 +193,9 @@ def push(bot, update):
                             "@" + content['telegram_username'],
                             content['area'],
                             content['other']))
-            else:
-                update.message.reply_text(
-                    '请到菜单 > 设置 > 添加你的 username，管理员需要这个来拉你入群')
+        else:
+            update.message.reply_text(
+                '请到菜单 > 设置 > 添加你的 username，管理员需要这个来拉你入群')
     return ConversationHandler.END
 
 
