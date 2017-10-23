@@ -172,7 +172,7 @@ def push(bot, update):
             '已取消', reply_markup=ReplyKeyboardRemove())
     elif pushstat == "是":
         content = cache.hashgetall(user.id)
-        if user.id is not None:
+        if len(user.id) != 0:
             content['telegram_id'] = user.id
             db.push(content)  # push to database
             cache.hashclean(user.id)  # clean cache
