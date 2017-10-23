@@ -172,26 +172,30 @@ def push(bot, update):
             '已取消', reply_markup=ReplyKeyboardRemove())
     elif pushstat == "是":
         content = cache.hashgetall(user.id)
-        content['telegram_id'] = user.id
-        db.push(content)  # push to database
-        cache.hashclean(user.id)  # clean cache
-        telegram_id = db.getAdminId(content)
-        if telegram_id == []:
-            update.message.reply_text(
-                "区域不存在，请重新 /join",
-                reply_markup=ReplyKeyboardRemove())
-        else:
-            update.message.reply_text(
-                '提交成功', reply_markup=ReplyKeyboardRemove())
-            for i in telegram_id:
-                bot.send_message(
-                    i,
-                    text="ingress_id: {}\ntelegram_username: {}\narea: {}\nother: {}"
-                    .format(
-                        content['ingress_id'],
-                        "@" + content['telegram_username'],
-                        content['area'],
-                        content['other']))
+        if user.id is not None:
+            content['telegram_id'] = user.id
+            db.push(content)  # push to database
+            cache.hashclean(user.id)  # clean cache
+            telegram_id = db.getAdminId(content)
+            if telegram_id == []:
+                update.message.reply_text(
+                    "区域不存在，请重新 /join",
+                    reply_markup=ReplyKeyboardRemove())
+            else:
+                update.message.reply_text(
+                    '提交成功', reply_markup=ReplyKeyboardRemove())
+                for i in telegram_id:
+                    bot.send_message(
+                        i,
+                        text="ingress_id: {}\ntelegram_username: {}\narea: {}\nother: {}"
+                        .format(
+                            content['ingress_id'],
+                            "@" + content['telegram_username'],
+                            content['area'],
+                            content['other']))
+            else:
+                update.message.reply_text(
+                    '请到菜单 > 设置 > 添加你的 username，管理员需要这个来拉你入群')
     return ConversationHandler.END
 
 
