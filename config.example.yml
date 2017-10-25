@@ -24,3 +24,7 @@ bot:
 redis:
     addr: localhost
     redispasswd: foobar
+google:
+    client_id:
+    client_secret:
+    map_key:
